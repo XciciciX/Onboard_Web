@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     // Validate the incoming data
     if (!data.formData) {
       return NextResponse.json(
-        { error: 'Form data is required' },
+        { error: 'Form data is required', showFor: 2500  },
         { status: 400 }
       );
     }
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error processing onboarding data:', error);
     return NextResponse.json(
-      { error: 'Failed to process onboarding data' },
+      { error: 'Failed to process onboarding data', showFor: 2500  },
       { status: 500 }
     );
   }

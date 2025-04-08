@@ -9,16 +9,19 @@ export const OnboardingContext = createContext<{
   formData: Record<string, any>;
   updateFormData: (step: number, data: any) => void;
   currentStep: number;
+  validateRequiredFields: () => boolean;
 }>({
   formData: {},
   updateFormData: () => {},
-  currentStep: 0
+  currentStep: 0,
+  validateRequiredFields: () => true
 });
 
 export function OnboardingContent({ children }: { children: React.ReactNode }) {
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [validationError, setValidationError] = useState('');
   const router = useRouter();
   const pathname = usePathname();
   
@@ -39,8 +42,47 @@ export function OnboardingContent({ children }: { children: React.ReactNode }) {
     }));
   };
 
+  // Validate required fields in the current form
+  const validateRequiredFields = () => {
+    const form = document.querySelector('form') as HTMLFormElement;
+    if (!form) return true; // No form to validate
+    
+    // Find all required inputs
+    const requiredInputs = form.querySelectorAll('input[required], select[required], textarea[required]');
+    
+    // Check if all required fields have values
+    let isValid = true;
+    let firstInvalidField: HTMLElement | null = null;
+    
+    requiredInputs.forEach((input) => {
+      const element = input as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+      if (!element.value.trim()) {
+        isValid = false;
+        if (!firstInvalidField) {
+          firstInvalidField = element;
+        }
+      }
+    });
+    
+    // Focus the first invalid field and show error message
+    if (!isValid && firstInvalidField) {
+      firstInvalidField.focus();
+      setValidationError('Please fill in all required fields before proceeding.');
+      setTimeout(() => setValidationError(''), 2500); // Clear error after 5 seconds
+    } else {
+      setValidationError('');
+    }
+    
+    return isValid;
+  };
+
   // Navigate to next step
   const goToNextStep = () => {
+    // Validate required fields
+    if (!validateRequiredFields()) {
+      return;
+    }
+    
     // Collect form data from current step
     const form = document.querySelector('form') as HTMLFormElement;
     if (form) {
@@ -58,7 +100,7 @@ export function OnboardingContent({ children }: { children: React.ReactNode }) {
 
   // Navigate to previous step
   const goToPrevStep = () => {
-    // Collect form data from current step
+    // Collect form data from current step (even if incomplete)
     const form = document.querySelector('form') as HTMLFormElement;
     if (form) {
       const formData = new FormData(form);
@@ -75,6 +117,11 @@ export function OnboardingContent({ children }: { children: React.ReactNode }) {
   
   // Handle finish button click
   const handleFinish = async () => {
+    // Validate required fields
+    if (!validateRequiredFields()) {
+      return;
+    }
+    
     // Collect form data from final step
     const form = document.querySelector('form') as HTMLFormElement;
     if (form) {
@@ -110,7 +157,7 @@ export function OnboardingContent({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <OnboardingContext.Provider value={{ formData, updateFormData, currentStep }}>
+    <OnboardingContext.Provider value={{ formData, updateFormData, currentStep, validateRequiredFields }}>
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-medium text-gray-300">Onboarding</h1>
         <div className="flex items-center">
@@ -141,6 +188,12 @@ export function OnboardingContent({ children }: { children: React.ReactNode }) {
         </div>
         
         <div className="col-span-3 bg-gray-900 p-6 rounded-lg">
+          {validationError && (
+            <div className="mb-4 p-3 bg-red-900/50 border border-red-500 rounded text-red-200">
+              {validationError}
+            </div>
+          )}
+          
           {children}
           
           {!isSuccessPage && (
